@@ -1,3 +1,3 @@
 # cpu
-# call/ret are yet to be realized
+# call/ret are to be debugged
 # embedding cmd code awaits implementation
