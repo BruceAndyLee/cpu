@@ -32,13 +32,14 @@ public:
 	CPU(const char* bin_str, size_t code_len);
 	~CPU();
 
-	int execute();
+	void execute();
 
 private:
 	void	my_strncpy(char* dest, const char* src, size_t len);
+	void	set_cmd_ptrs();
 	int		get_cmd_num();
 #define _CPU_CMDS_
-#define CPU_CMD(name, argsnum, cmdnum, code)\
+#define CPU_CMD(name, cmdbinlen, argsnum, cmdnum, code)\
 	int	  name();
 #include "supercmd.txt"
 #undef CPU_CMD
@@ -120,7 +121,7 @@ void CPU::my_strncpy(char* dest, const char* src, size_t len)
 }
 
 #define _CPU_CMDS_
-#define CPU_CMD(name, argsnum, cmdnum, code)\
+#define CPU_CMD(name, cmdbinlen, argsnum, cmdnum, code)\
 int CPU::name() 							\
 {											\
 	code									\
@@ -139,16 +140,36 @@ int CPU::get_cmd_num()
 	return res;
 }
 
-int CPU::execute()
+void CPU::set_cmd_ptrs()
 {
-	//set_cmd_ptrs();
-	while(code_len_ - bin_offset_ >= sizeof(int))
+	while (code_len_- bin_offset_ >= sizeof(int)) 
 	{
-		printf("bin_str[%d]: %i\n", bin_offset_, bin_str_[bin_offset_]);
-		cmd_ptrs_[ip_]	= bin_offset_;		//user expected to write code defining functions before calling them
-		cur_cmd_num_	= get_cmd_num();
+		cmd_ptrs_[ip_] = bin_offset_;
+		cur_cmd_num_ = get_cmd_num();
 #define _CPU_CMDS_
-#define CPU_CMD(name, argsnum, cmdnum, code)\
+#define CPU_CMD(name, cmdbinlen, argsnum, cmdnum, code)\
+		if (cur_cmd_num_ == cmdnum) bin_offset_ += cmdbinlen; 
+#include "supercmd.txt"
+#undef CPU_CMD
+#undef _CPU_CMDS_
+		ip_++;
+	}
+	ip_ = 0;
+	bin_offset_ = 0;
+}
+
+void CPU::execute()
+{
+	set_cmd_ptrs();
+	for (size_t i = 1; cmd_ptrs_[i] != 0; i++)
+		printf("cmd_ptrs_[%lu]: %lu\n", i, cmd_ptrs_[i]);
+	while (1)
+	{
+		printf("bin_str[%lu]: %i\n", bin_offset_, bin_str_[bin_offset_]);
+		bin_offset_  = cmd_ptrs_[ip_]; //to deal with a cmd that pointed at by ip_
+		cur_cmd_num_ = get_cmd_num();
+#define _CPU_CMDS_
+#define CPU_CMD(name, cmdbinlen, argsnum, cmdnum, code)\
 		if (cur_cmd_num_ == cmdnum)			\
 			name();
 #include "supercmd.txt"
@@ -160,11 +181,10 @@ int CPU::execute()
 
 			for (size_t i = 0; i < sizeof(int); i++)
 				((char*)&next_one)[i] = bin_str_[bin_offset_ + i];
-			printf("next cmd num: %d\n", next_one);
+			printf("next cmd num:[char %lu] %d\n", bin_offset_, next_one);
 		}
 		printf("=========================\n");
 	}
-	return 0;
 }
 
 int main(int argc, char* argv[])
@@ -182,7 +202,7 @@ int main(int argc, char* argv[])
 	}
 	
 	size_t binflen = getflen(bin_f);
-	char* bin_str = (char*) calloc (getflen(bin_f), sizeof(char));
+	char* bin_str = (char*) calloc (binflen + 1, sizeof(char));
 	if (!bin_str)
 	{
 		printf("CPU: error finding memory to keep .asm file\n");
@@ -190,16 +210,18 @@ int main(int argc, char* argv[])
 	}
 
 	printf ("binflen: %lu\n", binflen);
-	if (fread(bin_str, sizeof(char), binflen, bin_f) < binflen)
-		printf("warning: read less character than expected\n");
-	
-	bin_str[binflen - 1] = EOF;
 
-	for (int i = 0; i < binflen; i++)
-		printf("bin_str[%i]: %i\n", i, bin_str[i]);
+	size_t read = 0;
+	if ((read = fread(bin_str, sizeof(char), binflen, bin_f)) < binflen)
+		printf("warning: read less character than expected:\n\tread: %lu; expected: %lu\n", read, binflen);
+	
+	bin_str[binflen] = EOF;
+
+	for (size_t i = 0; i < binflen; i++)
+		printf("bin_str[%lu]: %i\n", i, bin_str[i]);
 	printf("\n\n");
 
-	CPU my_cpu(bin_str, binflen);
+	CPU my_cpu(bin_str, binflen + 1);
 	my_cpu.execute();
 	free(bin_str);
 }
