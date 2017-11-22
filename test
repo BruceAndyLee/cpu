@@ -1,0 +1,6 @@
+POP %3
+ADD
+ADD
+loop:
+MUL
+JMP loop

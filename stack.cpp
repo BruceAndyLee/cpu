@@ -38,7 +38,7 @@ Stack::Stack(size_t capacity):
 int Stack::Create(size_t capacity)
 {
 	printf("SPEAKING FROM CREATE\n");
-	if (!data_ || !capacity_ || !check_sum_)
+	if (!data_ || !capacity_)
 	{
 		printf("Stack created but not Initialized\nInitializing...\n");
 		canary1_  = canary2_ = PSN_INT;
@@ -59,7 +59,7 @@ int Stack::Create(size_t capacity)
 
 Stack::~Stack()
 {
-	 free(data_);
+	 free(--data_);
 }
 
 double* Stack::getDataPtr()
@@ -216,7 +216,7 @@ double Stack::getCheckSum()
 		canary2_  	 +
 		(size_t)data_canary_left_  +
 		(size_t)data_canary_right_ +
-		*data_canary_left_         +
+		(size_t)*data_canary_left_ +
 		*data_canary_right_;
 
 	for (unsigned int i = 0; i < counter_; sum += data_[i++]);

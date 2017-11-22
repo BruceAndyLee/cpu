@@ -3,7 +3,7 @@ FLAGS=$(DISOPTIONS) -lasan -O2 -g -std=c++14 -Wall -Wextra -Weffc++ -Waggressive
 
 
 all:
-	@g++ $(FLAGS) -o cpu.out cpu.cpp stack.cpp
+	@g++ $(FLAGS) -o cpu.out cpu01.cpp stack.cpp
 
 dumb:
 	g++ -std=c++14 -o cpu.out cpu.cpp
