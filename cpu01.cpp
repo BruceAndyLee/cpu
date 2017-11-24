@@ -37,10 +37,10 @@ public:
 private:
 	void	my_strncpy(char* dest, const char* src, size_t len);
 	void	set_cmd_ptrs();
-	int		get_cmd_num();
+	size_t	get_cmd_num();
 #define _CPU_CMDS_
 #define CPU_CMD(name, cmdbinlen, argsnum, cmdnum, code)\
-	int	  name();
+	void	name();
 #include "supercmd.txt"
 #undef CPU_CMD
 #undef _CPU_CMDS_
@@ -58,6 +58,10 @@ private:
 	int		type2_;
 	int		arg1_;
 	int		arg2_;
+
+	int		g_flg;
+	int		l_flg;
+	int		e_flg;
 };
 
 CPU::CPU(const char* bin_str, size_t code_len):
@@ -66,7 +70,6 @@ stack_		(NULL),
 cmd_ptrs_	((size_t*) calloc (code_len, sizeof(size_t))),
 code_len_	(code_len),
 registers_	(NULL),
-flags_		(NULL),
 bin_str_	((char*) calloc (code_len_, sizeof(char))),
 bin_offset_	(0),
 ip_			(0),
@@ -74,7 +77,10 @@ cur_cmd_num_(0),
 type1_		(0),
 type2_		(0),
 arg1_		(0),
-arg2_		(0)
+arg2_		(0),
+g_flg		(0),
+l_flg		(0),
+e_flg		(0)
 {
 	ra_stack_	= new Stack(10);
 	stack_		= new Stack(10);
@@ -93,11 +99,6 @@ arg2_		(0)
 	if (!(registers_ = (double*) calloc (10, sizeof(double))))
 	{
 		printf("CPU: error finding memory to serve registers\n");
-		exit(EXIT_FAILURE);
-	}
-	if (!(flags_ = (int*) calloc (3, sizeof(int))))
-	{
-		printf("CPU: error finding memory to serve flags");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -122,16 +123,15 @@ void CPU::my_strncpy(char* dest, const char* src, size_t len)
 
 #define _CPU_CMDS_
 #define CPU_CMD(name, cmdbinlen, argsnum, cmdnum, code)\
-int CPU::name() 							\
+void CPU::name() 							\
 {											\
 	code									\
-	return 0;								\
 }
 #include "supercmd.txt"
 #undef CPU_CMD
 #undef _CPU_CMDS_
 
-int CPU::get_cmd_num()
+size_t CPU::get_cmd_num()
 {
 	int res = 0;
 	for (size_t i = 0; i < sizeof(int); i++)	
@@ -142,10 +142,12 @@ int CPU::get_cmd_num()
 
 void CPU::set_cmd_ptrs()
 {
-	while (code_len_- bin_offset_ >= sizeof(int)) 
+	ip_			= 0;
+	bin_offset_ = 4;
+	while (code_len_ - bin_offset_ >= sizeof(int)) 
 	{
-		cmd_ptrs_[ip_] = bin_offset_;
-		cur_cmd_num_ = get_cmd_num();
+		cmd_ptrs_[ip_]	= bin_offset_;
+		cur_cmd_num_	= (int) get_cmd_num();
 #define _CPU_CMDS_
 #define CPU_CMD(name, cmdbinlen, argsnum, cmdnum, code)\
 		if (cur_cmd_num_ == cmdnum) bin_offset_ += cmdbinlen; 
@@ -161,12 +163,16 @@ void CPU::set_cmd_ptrs()
 void CPU::execute()
 {
 	set_cmd_ptrs();
+ 	ip_ = get_cmd_num(); //at the beginning there is the address of main label
+
 	for (size_t i = 1; cmd_ptrs_[i] != 0; i++)
 		printf("cmd_ptrs_[%lu]: %lu\n", i, cmd_ptrs_[i]);
+
 	while (1)
 	{
-		printf("bin_str[%lu]: %i\n", bin_offset_, bin_str_[bin_offset_]);
 		bin_offset_  = cmd_ptrs_[ip_]; //to deal with a cmd that pointed at by ip_
+		printf("bin_str[%lu]: %i\n", bin_offset_, bin_str_[bin_offset_]);
+		printf("ip_ = %lu; cmd_ptrs_[%lu]: %lu\n", ip_, ip_, cmd_ptrs_[ip_]);
 		cur_cmd_num_ = get_cmd_num();
 #define _CPU_CMDS_
 #define CPU_CMD(name, cmdbinlen, argsnum, cmdnum, code)\
@@ -184,6 +190,7 @@ void CPU::execute()
 			printf("next cmd num:[char %lu] %d\n", bin_offset_, next_one);
 		}
 		printf("=========================\n");
+		getchar();
 	}
 }
 

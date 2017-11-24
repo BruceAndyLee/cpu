@@ -1,8 +1,8 @@
 #ifdef _CPU_CMDS_
 
-CPU_CMD(PUSH, 8, 1, 1, printf("push\n"); 
-					bin_offset_ += 2 * sizeof(int);
-					ip_++;
+CPU_CMD(PUSH, 8, 1, 1,	printf("push\n"); 
+						bin_offset_ += 2 * sizeof(int);
+						ip_++;
 		)
 
 CPU_CMD(JMP, 8, 1, 2,	printf("jump\n");
@@ -48,10 +48,9 @@ CPU_CMD	(POP, 8, 1, 3,	printf("pop\n");
 								ip_++;
 								break;
 							default:
-								printf("CPU: error: invalid arg type for cmd 'POP'\n");
+								printf("CPU: error: invalid arg type for cmd 'POP' %d\n", type1_);
 								exit(EXIT_FAILURE);
 						}
-						ip_++;
 		)
 	
 CPU_CMD	(ADD, 0, 0, 4,	printf("add\n");
@@ -76,13 +75,17 @@ CPU_CMD(CALL, 8, 1, 8, printf("call\n");
 							((char*)&addr)[i] = bin_str_[bin_offset_ + i];
 						bin_offset_ += sizeof(int);
 					
-						ra_stack_->Push((double)ip_);
+						printf("CALL: PUSHING: %lu\n", ip_ + 1);
+						ra_stack_->Push((double)(ip_ + 1));
 						switch (type1_)
 						{
 							case TYPE_RGSR:
 								ip_ = (size_t) registers_[addr];
 								break;
 							case TYPE_LABL:
+								ip_ = addr;
+								break;
+							case TYPE_CNST:
 								ip_ = addr;
 								break;
 							default:
@@ -128,7 +131,155 @@ CPU_CMD	(INR, 8, 1, 12,	printf("inr\n");
 CPU_CMD	(RET, 0, 0, 13,	printf("ret\n");
 						int errcode = 0;
 						ip_ = (size_t) ra_stack_->Pop(&errcode);
+						printf("CPU: Pop: popped %lu\n", ip_);
 						printf("CPU: Pop: errcode %d\n", errcode);
 		)
+CPU_CMD (IN, 0, 0, 14,	printf("in\n");
+						double rec = 0;
+						if (scanf("%lg", &rec) < 0)
+						{
+							printf("CPU: IN: error reading\n");
+							exit(EXIT_FAILURE);
+						}
+						stack_->Push(rec);
+						printf("CPU: Push: pushed %lg\n", rec);
+						ip_++;
+		)
 
+CPU_CMD (OUT, 0, 0, 15, printf("out\n");
+						int errcode = 0;
+						printf("Pop: %lg\n", stack_->Pop(&errcode));
+						ip_++;
+		)
+
+CPU_CMD (HLT, 0, 0, 16, printf("HLT\n");
+						exit(EXIT_SUCCESS);
+		)
+
+CPU_CMD (JE, 8, 1, 17,	printf("JE");
+						if (e_flg)
+						{
+							for (size_t i = 0; i < sizeof(int); i++)
+								((char*)&type1_)[i] = bin_str_[bin_offset_ + i];
+							bin_offset_ += sizeof(int);
+	
+							unsigned int addr = 0;
+							for (size_t i = 0; i < sizeof(int); i++)
+								((char*)&addr)[i] = bin_str_[bin_offset_ + i];
+							bin_offset_ += sizeof(int);
+							switch (type1_)
+							{
+								case TYPE_RGSR:
+									ip_ = (size_t) registers_[addr];
+									break;
+								case TYPE_CNST:
+									ip_ = addr;
+									break;
+								default:
+									printf("CPU: Error: invalid arg type for 'JUMP' cmd\n");
+									exit(EXIT_FAILURE);
+							}
+							e_flg = 0;
+						}
+		)
+
+CPU_CMD (JG, 8, 1, 18,	printf("JG\n");
+						if (g_flg)
+						{
+							for (size_t i = 0; i < sizeof(int); i++)
+								((char*)&type1_)[i] = bin_str_[bin_offset_ + i];
+							bin_offset_ += sizeof(int);
+	
+							unsigned int addr = 0;
+							for (size_t i = 0; i < sizeof(int); i++)
+								((char*)&addr)[i] = bin_str_[bin_offset_ + i];
+							bin_offset_ += sizeof(int);
+							switch (type1_)
+							{
+								case TYPE_RGSR:
+									ip_ = (size_t) registers_[addr];
+									break;
+								case TYPE_CNST:
+									ip_ = addr;
+									break;
+								default:
+									printf("CPU: Error: invalid arg type for 'JUMP' cmd\n");
+									exit(EXIT_FAILURE);
+							}
+							g_flg = 0;
+						}
+		)
+
+
+CPU_CMD (JL, 8, 1, 19,	printf("JL\n");
+						if (l_flg)
+						{
+							for (size_t i = 0; i < sizeof(int); i++)
+								((char*)&type1_)[i] = bin_str_[bin_offset_ + i];
+							bin_offset_ += sizeof(int);
+	
+							unsigned int addr = 0;
+							for (size_t i = 0; i < sizeof(int); i++)
+								((char*)&addr)[i] = bin_str_[bin_offset_ + i];
+							bin_offset_ += sizeof(int);
+							switch (type1_)
+							{
+								case TYPE_RGSR:
+									ip_ = (size_t) registers_[addr];
+									break;
+								case TYPE_CNST:
+									ip_ = addr;
+									break;
+								default:
+									printf("CPU: Error: invalid arg type for 'JUMP' cmd\n");
+									exit(EXIT_FAILURE);
+							}
+							l_flg = 0;
+						}
+		)
+
+CPU_CMD (CMP, 16, 2, 20,	printf("CMP\n");
+							for (size_t i = 0; i < sizeof(int); i++)
+								((char*)&type1_)[i] = bin_str_[bin_offset_ + i];
+							bin_offset_ += sizeof(int);
+	
+							for (size_t i = 0; i < sizeof(int); i++)
+								((char*)&arg1_)[i] = bin_str_[bin_offset_ + i];
+							bin_offset_ += sizeof(int);
+	
+							for (size_t i = 0; i < sizeof(int); i++)
+								((char*)&type2_)[i] = bin_str_[bin_offset_ + i];
+							bin_offset_ += sizeof(int);
+	
+							for (size_t i = 0; i < sizeof(int); i++)
+								((char*)&arg2_)[i] = bin_str_[bin_offset_ + i];
+							bin_offset_ += sizeof(int);
+	
+							switch (type1_)
+							{
+								case TYPE_CNST:
+									break;
+								case TYPE_RGSR:
+									arg1_ = registers_[arg1_];
+								default:
+									printf("CPU: CMP: error: wrong arg1 type.\n");
+									exit(EXIT_FAILURE);
+							}
+	
+							switch (type2_)
+							{
+								case TYPE_CNST:
+									break;
+								case TYPE_RGSR:
+									arg2_ = registers_[arg2_];
+								default:
+									printf("CPU: CMP: error: wrong arg2 type.\n");
+									exit(EXIT_FAILURE);
+							}
+	
+							if (arg1_ > arg2_)	g_flg = 1;
+							if (arg1_ < arg2_)	l_flg = 1;
+							if (arg1_ == arg2_)	e_flg = 1;
+							ip_++;
+	)
 #endif

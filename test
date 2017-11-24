@@ -1,6 +1,10 @@
+func:
+MUL
+POP %4 
+RET
+
 POP %3
 ADD
 ADD
-loop:
-MUL
-JMP loop
+CALL func
+HLT
